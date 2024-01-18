@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  puller: 
+    image: puller:v0.4
+    restart: always 
+    container_name: puller
+    network_mode: "host" 
+    volumes: 
+     - /var/run/docker.sock:/var/run/docker.sock:ro
+     - /etc/localtime:/etc/localtime:ro
+     - ./images:/images
+     - ./logs:/logs
+

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Загрузчик</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <h1>Загрузчик Докер образов</h1>
+  <div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <ul class="flashes">
+      {% for category, message in messages %}
+      <li class="{{ category }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+    <ul class="download_list">
+      {% for file in files %}
+      <li><a href="{{ url_for('download_tar', filename=file) }}">{{ file }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="container">
+    <div class="form-group">
+      <form method="POST" action="{{ url_for('download') }}" id="download-form">
+        <p>Поле ввода имени Докер образа</p>
+        <input type="text" name="image_name" class="form-control" id="image-name"
+          placeholder="Пример ввода: 10.3.10.10:5000/image_name" list="tree">
+        <datalist id="tree">
+          <option value="10.3.29.38:5000/zvk/">
+          <option value="10.3.29.38:5000/zrp/">
+        </datalist>
+        <button type="button" class="btn btn-secondary" onclick="toggleTagInput()">Изменить тэг перед
+          скачиванием</button>
+        <button type="submit" class="btn btn-primary" id="download-button" onclick="showLoading()">Скачать
+          архив</button>
+      </form>
+
+      <!-- Всплывающее окно ввода тэга -->
+      <div id="tag-input-modal" style="display: none;">
+        <p>Поле ввода тэга</p>
+        <input type="text" name="new_tag" class="form-control" id="new-tag" placeholder="Пример ввода: latest">
+      </div>
+      <br>
+      <div id="loading" style="display: none;" class="loading" id="loading">
+        <p>Время ожидания загрузки до 10 минут.</p>
+        <p>Загрузка начнется автоматически.</p>
+        <p>Не закрывай страницу! </p>
+      </div>
+      <form method="POST" action="{{ url_for('delete') }}">
+        <input type="hidden" name="image_name" id="deleteImageName" value="{{ image_name }}" class="form-control"
+          required>
+        <button type="submit">Удалить архив</button>
+      </form>
+      <br>
+      <form method="POST" action="{{ url_for('check') }}">
+        <input type="hidden" name="image_name" id="checkImageName" value="{{ image_name }}" class="form-control"
+          required>
+        <button type="submit">Проверить архив</button>
+      </form>
+      <br>
+      <form method="POST" action="{{ url_for('registry') }}">
+        <input type="hidden" name="image_name" id="search_terms" value="{{ image_name }}" class="form-control" required>
+        <button type="submit">Локальный поиск имен</button>
+      </form>
+      {% if found_images %}
+      <h2>Результат поиска по имени "{{ image_name }}":</h2>
+      <ul>
+        {% for image in found_images %}
+        <li>
+          {{ image }}
+          <ul>
+            {% for tag in image_tags[image] %}
+            <li>тэг: {{ tag }}</li>
+            {% endfor %}
+          </ul>
+        </li>
+        {% endfor %}
+      </ul>
+      {% elif image_name %}
+      <h2>Имя: "{{ image_name }}" - не найдено в локальном реестре.</h2>
+      {% endif %}
+
+      <br>
+      <a href="http://10.3.10.10">Перейти в ДокерХаб</a>
+      <script>
+        // Get the input field
+        const inputField = document.querySelector('input[name="image_name"]');
+        // Set the value of the input field to the corresponding hidden fields in the other forms
+        inputField.addEventListener("input", function () {
+          const value = inputField.value;
+          document.getElementById("deleteImageName").value = value;
+          document.getElementById("checkImageName").value = value;
+          document.getElementById("search_terms").value = value;
+        });
+
+        function toggleTagInput() {
+          const tagInputModal = document.getElementById('tag-input-modal');
+          if (tagInputModal.style.display === 'none') {
+            tagInputModal.style.display = 'block';
+          } else {
+            tagInputModal.style.display = 'none';
+          }
+        }
+
+        document.getElementById('download-form').addEventListener('submit', function (event) {
+          const newTag = document.getElementById('new-tag').value.trim();
+          if (newTag.length > 0) {
+            const newTagInput = document.createElement('input');
+            newTagInput.type = 'hidden';
+            newTagInput.name = 'new_tag';
+            newTagInput.value = newTag;
+            this.appendChild(newTagInput);
+          }
+        });
+
+        function showLoading() {
+          document.getElementById("loading").style.display = "block";
+        }
+
+      </script>
+    </div>
+</body>
+
+</html>
