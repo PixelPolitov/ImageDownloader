@@ -12,10 +12,11 @@ from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
+DOCKER_REGISTRY = '10.3.10.10:5000'
 
 client = docker.from_env(timeout=None)
 client.login(username="repouser", password="repouser",
-             registry='10.3.10.10:5000')
+             registry=DOCKER_REGISTRY)
 
 # Configure logging
 logging.basicConfig(filename="./logs/log.txt", level=logging.INFO,
@@ -66,16 +67,27 @@ def download():
     # Get the image name and new tag from the form
     image_name = request.form['image_name']
     new_tag = request.form.get('new_tag')
-    image_tar_name = f"{image_name.replace('10.3.10.10:5000/', '').replace('path1/', '').replace('path2/', '')}"
+    pattern = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+/.+?/(.+)'
+
     if not image_name:
         flash("Для начала нужно ввести правильное (оригинальное) имя Докер образа и нажать кнопку скачать!", "error")
         return redirect(url_for("index"))
+
+    match = re.search(pattern, image_name)
+    if match:
+        image_tar_name = match.group(1)
+    else:
+        message = f"Image: '{image_name}' does not match the pattern"
+        logger.error(message)
+        flash(message, "error")
+        return redirect(url_for("index"))
+
     if not new_tag:
         try:
             new_tag = image_tar_name.split(':')[1]
             short_image_name = image_tar_name.split(':')[0]
             new_image_tag = f"{short_image_name}:{new_tag}"
-        except IndexError as e:
+        except IndexError:
             logger.info(
                 f"Image: '{image_name}' without tag. Set default tag latest")
             new_tag = "latest"
@@ -229,7 +241,7 @@ def registry():
 
 
 if __name__ == '__main__':
-    registry_url = 'http://10.3.10.10:5000'
+    registry_url = 'http://' + DOCKER_REGISTRY
     username = 'repouser'  # Замените на свои учетные данные
     password = 'repouser'  # Замените на свои учетные данные
     app.run(host='0.0.0.0', port=5005, debug=True)
